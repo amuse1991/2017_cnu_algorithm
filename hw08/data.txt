@@ -1,0 +1,184 @@
+ocurrance
+occurrence
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+
+//input1 : ocurrance
+//input2 : occurrence
+public class SequenceAlignment {
+    public static void main(String args[]){
+        SequenceAlignment s = new SequenceAlignment();
+        s.runSequenceAlignemnt();
+    }
+
+    private final static int GAP_COST = 1; //sigma
+    private final static int MISMATCH_COST = 2; //alpha(p,q)
+    private final static int TOP_LEFT = 0;
+    private final static int LEFT = 1;
+    private final static int TOP = 2;
+
+    private static String xStr;
+    private static String yStr;
+    private static int[][] optimalTable;
+    private static int optXLength;
+    private static int optYLength;
+    private ArrayList<String> dirList = new ArrayList<>();
+
+    private SequenceAlignment(){
+        stringInput();
+        //OPT init
+        optXLength = xStr.length()+1;
+        optYLength = yStr.length()+1;
+        optimalTable = new int[optXLength][optYLength];
+    }
+
+    public void runSequenceAlignemnt(){
+        int i;
+        int j;
+
+        for(i=0; i < optXLength; i++){
+            optimalTable[i][0] = i*GAP_COST;
+        }
+        for(j=0; j<optYLength; j++){
+            optimalTable[0][j] = j*GAP_COST;
+        }
+
+        for(i=1; i<optXLength; i++){
+            for(j=1; j<optYLength; j++){
+                int min = Integer.MAX_VALUE;
+                int align = caseAlignCoset(i,j);
+                int xGap = caseXGapCose(i,j);
+                int yGap = caseYGapCose(i,j);
+
+                if(align < min) {min = align;}
+                if(xGap < min) {min = xGap;}
+                if(yGap < min) {min = yGap;}
+
+                optimalTable[i][j] = min;
+            }
+        }
+        printTable(optimalTable);
+    }
+
+    //align 시키는 경우
+    private int caseAlignCoset(int i, int j){
+        return alphaXiYj(i,j) + optimalTable[i-1][j-1];
+    }
+    //x_i를 gap 시키는 경우
+    private int caseXGapCose(int i, int j){
+        return GAP_COST+optimalTable[i-1][j];
+    }
+    //y_j를 gap 시키는 경우
+    private int caseYGapCose(int i, int j){
+        return GAP_COST+optimalTable[i][j-1];
+    }
+
+    //alpha(xi, yj)계산하는 메소드
+    private int alphaXiYj(int i, int j) {
+        try {
+            Character xiChar = xStr.charAt(i);
+            Character yjChar = yStr.charAt(j);
+            if (xiChar == yjChar) {
+                return 0; //두 문자가 일치할 경우 0을 return
+            } else return MISMATCH_COST; //두 문자가 다를 경우 mismatch cost를 return
+        }catch (java.lang.StringIndexOutOfBoundsException e){
+            //문자열 길이가 일치하지 않을 경우임 이 경우 gap에 해당하므로 그냥 0을 return해줌
+            return 0;
+        }
+    }
+
+    //표준입력으로 문자열2개 입력받아서 각각 xStr, yStr에 저장
+    private void stringInput() {
+        try {
+            BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
+            System.out.print("String 1 : ");
+            String str = input.readLine();
+            yStr = str;
+            System.out.print("String 2 : ");
+            str = input.readLine();
+            xStr = str;
+        }catch(java.io.IOException e){
+            System.exit(-1);
+        }
+    }
+
+    private void printTable(int[][] table){
+        int min = optimalTable[optXLength-1][optYLength-1];
+
+        int resizeYLength = (optXLength)*2+2;
+        int resizeXLength = (optYLength)*2+2;
+        String [][] printArr = new String[resizeYLength][resizeXLength];
+
+        for(int i=5, cidx=0; cidx<xStr.length() ; i+=2,cidx++){
+            printArr[i][0] = String.valueOf(xStr.charAt(cidx));
+        }
+        for(int i=5, cidx=0; cidx<yStr.length() ; i+=2,cidx++){
+            printArr[0][i] = String.valueOf(yStr.charAt(cidx));
+        }
+
+
+        for(int i = 3, a=0; a<optimalTable.length; i+=2,a++) {
+            for (int j = 3, b=0; b < optimalTable[0].length; j+= 2,b++){
+                printArr[i][j] = String.valueOf(table[a][b]);
+            }
+        }
+
+        System.out.println("min cost : " + min);
+        makePath(optimalTable);
+
+        for(int i=0; i<printArr[0].length; i++){
+            for(int j=0; j<printArr.length; j++){
+                if(printArr[j][i] == null) {
+                    System.out.print(""+"\t");
+                }else{
+                    System.out.print(printArr[j][i]+"\t");
+                }
+            }
+            System.out.println("\r\n");
+        }
+    }
+    private void makePath(int[][]table){
+        int sIdxX = optXLength-1;
+        int sIdxY = optYLength-1;
+        int sVal;
+        while(true) {
+            try {
+                sVal = table[sIdxX][sIdxY];
+                int topValW = sVal - table[sIdxX][sIdxY - 1];
+                int leftValW = sVal - table[sIdxX - 1][sIdxY];
+                int leftTopValW = sVal - table[sIdxX - 1][sIdxY - 1];
+
+                int flag = 3;
+                int min = Integer.MAX_VALUE;
+                if (topValW < min) {
+                    min = topValW;
+                    flag = TOP;
+                }
+                if (leftValW < min) {
+                    min = leftValW;
+                    flag = LEFT;
+                }
+                if (leftTopValW < min) {
+                    min = leftTopValW;
+                    flag = TOP_LEFT;
+                }
+
+                switch (flag) {
+                    case TOP:
+                        dirList.add("↑");
+                        sIdxY--;
+                    case LEFT:
+                        dirList.add("←");
+                        sIdxX--;
+                    case TOP_LEFT:
+                        dirList.add("↖");
+                        sIdxX--; sIdxY--;
+                }
+            } catch (ArrayIndexOutOfBoundsException e) {
+                break;
+            }
+        }
+    }
+}
